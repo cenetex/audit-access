@@ -1,0 +1,38 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Test the checker
+        if: github.event_name == 'push'
+        run: node --test scripts/
+
+      # A pull request could edit the checker to pass itself, so use the one on the base branch.
+      - name: Check the request files in this pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          git show "origin/${{ github.base_ref }}:scripts/check.mjs" > "$RUNNER_TEMP/check.mjs"
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          echo "$changed"
+          if echo "$changed" | grep -qv '^requests/'; then
+            echo "::warning::This pull request changes more than a request file. A maintainer will read the whole diff."
+          fi
+          files="$(echo "$changed" | grep '^requests/.*\.json$' || true)"
+          # shellcheck disable=SC2086
+          node "$RUNNER_TEMP/check.mjs" $files
