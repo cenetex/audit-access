@@ -21,7 +21,7 @@ jobs:
 
       - name: Test the checker
         if: github.event_name == 'push'
-        run: node --test scripts/
+        run: node --test scripts/check.test.mjs
 
       # A pull request could edit the checker to pass itself, so use the one on the base branch.
       - name: Check the request files in this pull request
